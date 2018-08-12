@@ -1,0 +1,422 @@
+<!DOCTYPE html><html lang="en">
+<head><meta charset="utf-8">
+<title>Resistor Mesh to Denary Number Array</title>
+
+<script>
+    resmap = new Map([
+        [ 0,     0 ], [ 1,   100 ], [ 2,   240 ], [ 3,   390 ], [ 4,   680 ],
+        [ 5,  1000 ], [ 6,  1500 ], [ 7,  2200 ], [ 8,  4700 ], [ 9, 10000 ],
+    ]);
+
+    function say(text){
+        //document.write(text + " <br /> ");
+        console.log(text);
+    }
+
+    function resistorSVGin(id) {
+        const resistorSVG = `
+            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" 
+                width="30" height="50" id="svg0">
+                <path
+                    id="path0"
+                    d="m 15,50 0,-16 -5,-1.5 10,-3 -10,-3 10,-3 -10,-3 10,-3 -5,-1.5 0,-16"
+                    style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:5;stroke-opacity:1;stroke-dasharray:none" 
+                />
+            </svg>
+        `;
+        document.getElementById(id).innerHTML = resistorSVG;
+    }
+
+    function par6(a,b,c,d,e,f,p) {
+        var notb = (c+p)*(d+p)*(e+p)*(f+p);
+        var notc = (b+p)*(d+p)*(e+p)*(f+p);
+        var notd = (b+p)*(c+p)*(e+p)*(f+p);
+        var note = (b+p)*(c+p)*(d+p)*(f+p);
+        var notf = (b+p)*(c+p)*(d+p)*(e+p);
+        var bcdef = (b+p)*(c+p)*(d+p)*(e+p)*(f+p);
+        var otherside = p + bcdef/(notb + notc + notd + note + notf);
+        return (otherside*a)/(otherside+a);
+    }
+
+    function divMesh(Ha,Ru) {
+        var retArray = new Array();
+        retArray.push(par6(Ha[0],Ha[1],Ha[2],Ha[3],Ha[4],Ha[5],Ru));
+        retArray.push(par6(Ha[1],Ha[0],Ha[2],Ha[3],Ha[4],Ha[5],Ru));
+        retArray.push(par6(Ha[2],Ha[0],Ha[1],Ha[3],Ha[4],Ha[5],Ru));
+        retArray.push(par6(Ha[3],Ha[0],Ha[1],Ha[2],Ha[4],Ha[5],Ru));
+        retArray.push(par6(Ha[4],Ha[0],Ha[1],Ha[2],Ha[3],Ha[5],Ru));
+        retArray.push(par6(Ha[5],Ha[0],Ha[1],Ha[2],Ha[3],Ha[4],Ru));
+        return retArray;
+    }
+
+    function cmpSoln(Ha,Ru,HaTest) {
+        var test = divMesh(Ha,Ru);
+        var squaresum = 0;
+        var i = 0;
+        for (var element of test) {
+            squaresum += ( HaTest[i] - test[i] )**2; i++;
+        }
+        return squaresum;
+    }
+
+    function findBestMatch(Ha,Ru) {
+        var bestMatch = []; bestVal = Infinity;
+        for (var r5 of resmap.values()) {
+            for (var r4 of resmap.values()) {
+                for (var r3 of resmap.values()) {
+                    for (var r2 of resmap.values()) {
+                        for (var r1 of resmap.values()) {
+                            for (var r0 of resmap.values()) {
+                                var tmp = cmpSoln([r5,r4,r3,r2,r1,r0],Ru,Ha);
+                                if ( tmp < bestVal ) {
+                                    bestMatch = [r5,r4,r3,r2,r1,r0];
+                                    bestVal = tmp;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return bestMatch;
+    }
+
+    function arrayToVersionString(numarray) {
+        var versionString = "";
+        numarray.forEach( function(number, i) {
+            for (var [digit, r] of resmap.entries() ) {
+                if(number === r) {
+                    versionString = digit.toString() + versionString;
+                    if(i == 1 || i == 3) versionString = '.' + versionString;
+                    break;
+                }
+            }
+        });
+        return versionString;
+    }
+
+    function prettyArray(numarray, decimal_places=0, number_length=5) {
+        var retArray = [];
+        numarray.forEach( function(num) {
+            var npad = number_length - num.toFixed(decimal_places).length;
+            if (npad < 0) npad = 0;
+            retArray.push(' '.repeat(npad) + num.toFixed(decimal_places));
+        });
+        return '{ ' + retArray.reverse().join(', ') + ' }';
+    }
+
+    var pu = 1000;  var a = [0,0,0,0,0,0]; var ba = [];
+    // a = [447,0,0,1001,1123,0];  ba = findBestMatch(a,pu); say(prettyArray(a)) + say( prettyArray(ba) + " :: " + cmpSoln(ba,pu,a).toFixed(2) + " :: " + arrayToVersionString(ba)); say('');
+
+    window.onload = function() {
+        var progressReadout = document.getElementById('progressReadout');
+        var r_measured_box = new Map([
+            [ 0, document.getElementById('R0_measured')],
+            [ 1, document.getElementById('R1_measured')],
+            [ 2, document.getElementById('R2_measured')],
+            [ 3, document.getElementById('R3_measured')],
+            [ 4, document.getElementById('R4_measured')],
+            [ 5, document.getElementById('R5_measured')],
+        ]);
+        var useMeasuredButton = document.getElementById('useMeasuredButton');
+        var r_ideal_box = new Map([
+            [ 0, document.getElementById('R0_ideal')],
+            [ 1, document.getElementById('R1_ideal')],
+            [ 2, document.getElementById('R2_ideal')],
+            [ 3, document.getElementById('R3_ideal')],
+            [ 4, document.getElementById('R4_ideal')],
+            [ 5, document.getElementById('R5_ideal')],
+        ]);
+        var useIdealButton = document.getElementById('useIdealButton');
+        var r_digit_box = new Map([
+            [ 0, document.getElementById('R0_digit')],
+            [ 1, document.getElementById('R1_digit')],
+            [ 2, document.getElementById('R2_digit')],
+            [ 3, document.getElementById('R3_digit')],
+            [ 4, document.getElementById('R4_digit')],
+            [ 5, document.getElementById('R5_digit')],
+        ]);
+        var useDigitButton = document.getElementById('useDigitButton');
+
+        for (var [i,box] of r_ideal_box.entries()) {
+            box.options.length = 0;
+            box.options[0] = new Option("-", "-", true, false);  // default
+            for (var [digit, r] of resmap.entries()) {
+                box.options[digit+1] = new Option((r).toString(), r, false, false);
+            }
+        }
+
+        resistorSVGin("resSymb0");
+        resistorSVGin("resSymb1");
+        resistorSVGin("resSymb2");
+        resistorSVGin("resSymb3");
+        resistorSVGin("resSymb4");
+        resistorSVGin("resSymb5");
+
+        useMeasuredButton.addEventListener('click', useMeasured);
+        useIdealButton.addEventListener('click', useIdeal);
+        useDigitButton.addEventListener('click', useDigit);
+
+        function useMeasured() {
+            var measured = [];
+            for (var [i, box] of r_measured_box.entries()) {
+                measured[i] = Number(box.value); 
+            }
+
+            var best = findBestMatch(measured,pu);
+
+            for (var [i, box] of r_ideal_box.entries()) {
+                box.value = best[i].toFixed(0); 
+            }
+
+            for (var [i, box] of r_digit_box.entries() ) {
+                for (var [digit, r] of resmap.entries() ) {
+                    if (best[i] === r) box.value = digit;
+                }
+            }
+
+            var vs = arrayToVersionString(best);
+            progressReadout.innerText = prettyArray(best) + ":: " + prettyArray(divMesh(best,pu)) + ":: " + cmpSoln(best,pu,measured).toFixed(2) + " :: >>" + arrayToVersionString(best) + "<<";
+        }
+
+        function useIdeal() {
+
+            var ideal = [];
+            for (var [i, box] of r_ideal_box.entries()) {
+                ideal[i] = Number(box.value); 
+            }
+
+            var estimate = divMesh(ideal,pu);
+
+            for (var [i, box] of r_measured_box.entries()) {
+                box.value = estimate[i].toFixed(0); 
+            }
+
+            for (var [i, box] of r_digit_box.entries() ) {
+                for (var [digit, r] of resmap.entries() ) {
+                    if (ideal[i] === r) box.value = digit;
+                }
+            }
+
+            var vs = arrayToVersionString(ideal);
+            progressReadout.innerText = prettyArray(ideal) + ":: " + prettyArray(estimate) + ":: " + cmpSoln(ideal,pu,estimate).toFixed(2) + " :: >>" + arrayToVersionString(ideal) + "<<";
+        }
+
+        function useDigit() {
+
+            var digit = [];
+            var ideal = [];
+            for (var [i, box] of r_digit_box.entries()) {
+                digit[i] = Number(box.value);
+                ideal[i] = resmap.get(Number(box.value));
+            }
+
+            var estimate = divMesh(ideal,pu);
+
+            for (var [i, box] of r_measured_box.entries()) {
+                box.value = estimate[i].toFixed(0); 
+            }
+
+            for (var [i, box] of r_ideal_box.entries() ) {
+                box.value = ideal[i]
+            }
+
+            var vs = arrayToVersionString(ideal);
+            progressReadout.innerText = prettyArray(ideal) + ":: " + prettyArray(estimate) + ":: " + cmpSoln(ideal,pu,estimate).toFixed(2) + " :: >>" + arrayToVersionString(ideal) + "<<";
+        }
+    }
+</script>
+
+    <style>
+
+        input {
+            width   : 100%;
+        }
+
+        select {
+            width   : 100%;
+        }
+
+        table {
+            table-layout: fixed;
+            width: 100%;
+            border-collapse: collapse;
+            border: 3px solid rgb(0, 63, 127);
+        }
+
+
+        thead th:nth-child(1) {
+            width: 5%;
+        }
+
+        thead th:nth-child(2) {
+            width: 1%;
+        }
+
+        thead th:nth-child(3) {
+            width: 3%;
+        }
+
+        thead th:nth-child(4) {
+            width: 8%;
+        }
+
+        thead th:nth-child(5) {
+            width: 3%;
+        }
+
+        thead th:nth-child(6) {
+            width: 8%;
+        }
+
+        thead th:nth-child(7) {
+            width: 1%;
+        }
+
+        thead th:nth-child(8) {
+            width: 3%;
+        }
+
+        thead th:nth-child(9) {
+            width: 8%;
+        }
+
+        thead th:nth-child(10) {
+            width: 3%;
+        }
+
+        thead th:nth-child(11) {
+            width: 8%;
+        }
+
+        thead th:nth-child(12) {
+            width: 1%;
+        }
+
+        thead th:nth-child(13) {
+            width: 3%;
+        }
+
+        thead th:nth-child(14) {
+            width: 8%;
+        }
+
+        thead th:nth-child(15) {
+            width: 3%;
+        }
+
+        thead th:nth-child(16) {
+            width: 8%;
+        }
+
+        thead th:nth-child(17) {
+            width: 1%;
+        }
+
+        thead th:nth-child(18) {
+            width: 5%;
+        }
+
+        th, td {
+            padding: 5px;
+        }
+
+        .versionStringDigit {
+            text-align: center;
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+<body>
+    <div id="page-wrapper">
+        <h1>Converter</h1>
+        <form>
+            <table>
+                <caption>Resistor network to denary number array</caption>
+                <thead>
+                    <tr>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                        <th scope="col">A5</th>
+                        <th scope="col"></th>
+                        <th scope="col">A4</th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                        <th scope="col">A3</th>
+                        <th scope="col"></th>
+                        <th scope="col">A2</th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                        <th scope="col">A1</th>
+                        <th scope="col"></th>
+                        <th scope="col">A0</th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tr>
+                    <th scope="row">Rgnd</th>
+                    <td></td>
+                    <td></td>
+                    <td><input type="text" id="R5_measured" value="" /></td>
+                    <td></td>
+                    <td><input type="text" id="R4_measured" value="" /></td>
+                    <td></td>
+                    <td></td>
+                    <td><input type="text" id="R3_measured" value="" /></td>
+                    <td></td>
+                    <td><input type="text" id="R2_measured" value="" /></td>
+                    <td></td>
+                    <td></td>
+                    <td><input type="text" id="R1_measured" value="" /></td>
+                    <td></td>
+                    <td><input type="text" id="R0_measured" value="" /></td>
+                    <td></td>
+                    <td><input type="button" id="useMeasuredButton" value="use"></td>
+                </tr>
+                <tr>
+                    <th scope="row">R</th>
+                    <td></td>
+                    <td id="resSymb5" style="text-align: center;"></td>
+                    <td><select id="R5_ideal"><option value="">-</option></select></td>
+                    <td id="resSymb4" style="text-align: center;"></td>
+                    <td><select id="R4_ideal"><option value="">-</option></select></td>
+                    <td></td>
+                    <td id="resSymb3" style="text-align: center;"></td>
+                    <td><select id="R3_ideal"><option value="">-</option></select></td>
+                    <td id="resSymb2" style="text-align: center;"></td>
+                    <td><select id="R2_ideal"><option value="">-</option></select></td>
+                    <td></td>
+                    <td id="resSymb1" style="text-align: center;"></td>
+                    <td><select id="R1_ideal"><option value="">-</option></select></td>
+                    <td id="resSymb0" style="text-align: center;"></td>
+                    <td><select id="R0_ideal"><option value="">-</option></select></td>
+                    <td></td>
+                    <td><input type="button" id="useIdealButton" value="use"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Den</th>
+                    <td></td>
+                    <td colspan="2"><input type="number" id="R5_digit" min="0" max="9" value="0" /></td>
+                    <td colspan="2"><input type="number" id="R4_digit" min="0" max="9" value="0" /></td>
+                    <td>.</td>
+                    <td colspan="2"><input type="number" id="R3_digit" min="0" max="9" value="0" /></td>
+                    <td colspan="2"><input type="number" id="R2_digit" min="0" max="9" value="0" /></td>
+                    <td>.</td>
+                    <td colspan="2"><input type="number" id="R1_digit" min="0" max="9" value="0" /></td>
+                    <td colspan="2"><input type="number" id="R0_digit" min="0" max="9" value="0" /></td>
+                    <td></td>
+                    <td><input type="button" id="useDigitButton" value="use"></td>
+
+                </tr>
+
+            </table>
+            <pre id="progressReadout">--</pre>
+        </form> 
+    </div>
+</body>
+
+</html>
