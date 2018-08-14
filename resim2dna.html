@@ -138,12 +138,22 @@
         ]);
         var useDigitButton = document.getElementById('useDigitButton');
 
-        for (var [i,box] of r_ideal_box.entries()) {
+        for (var [i, box] of r_ideal_box) {
+            box.addEventListener('change', useIdeal);
             box.options.length = 0;
-            box.options[0] = new Option("-", "-", true, false);  // default
-            for (var [digit, r] of resmap.entries()) {
-                box.options[digit+1] = new Option((r).toString(), r, false, false);
+            for (var [digit, r] of resmap) {
+                box.options[resmap.size - digit - 1] = new Option((r).toString(), r, false, false);
             }
+            box.options[resmap.size-1].selected = true;
+        }
+
+        for (var [i, box] of r_digit_box) {
+            box.addEventListener('change', useDigit);
+            box.options.length = 0;
+            for (var [digit, r] of resmap) {
+                box.options[9-digit] = new Option((digit).toString(), digit, false, false);
+            }
+            box.options[resmap.size-1].selected = true;
         }
 
         resistorSVGin("resSymb0");
@@ -154,23 +164,21 @@
         resistorSVGin("resSymb5");
 
         useMeasuredButton.addEventListener('click', useMeasured);
-        useIdealButton.addEventListener('click', useIdeal);
-        useDigitButton.addEventListener('click', useDigit);
 
         function useMeasured() {
             var measured = [];
-            for (var [i, box] of r_measured_box.entries()) {
+            for (var [i, box] of r_measured_box) {
                 measured[i] = Number(box.value); 
             }
 
             var best = findBestMatch(measured,pu);
 
-            for (var [i, box] of r_ideal_box.entries()) {
+            for (var [i, box] of r_ideal_box) {
                 box.value = best[i].toFixed(0); 
             }
 
-            for (var [i, box] of r_digit_box.entries() ) {
-                for (var [digit, r] of resmap.entries() ) {
+            for (var [i, box] of r_digit_box ) {
+                for (var [digit, r] of resmap ) {
                     if (best[i] === r) box.value = digit;
                 }
             }
@@ -182,18 +190,18 @@
         function useIdeal() {
 
             var ideal = [];
-            for (var [i, box] of r_ideal_box.entries()) {
+            for (var [i, box] of r_ideal_box) {
                 ideal[i] = Number(box.value); 
             }
 
             var estimate = divMesh(ideal,pu);
 
-            for (var [i, box] of r_measured_box.entries()) {
+            for (var [i, box] of r_measured_box) {
                 box.value = estimate[i].toFixed(0); 
             }
 
-            for (var [i, box] of r_digit_box.entries() ) {
-                for (var [digit, r] of resmap.entries() ) {
+            for (var [i, box] of r_digit_box ) {
+                for (var [digit, r] of resmap ) {
                     if (ideal[i] === r) box.value = digit;
                 }
             }
@@ -206,18 +214,18 @@
 
             var digit = [];
             var ideal = [];
-            for (var [i, box] of r_digit_box.entries()) {
+            for (var [i, box] of r_digit_box) {
                 digit[i] = Number(box.value);
                 ideal[i] = resmap.get(Number(box.value));
             }
 
             var estimate = divMesh(ideal,pu);
 
-            for (var [i, box] of r_measured_box.entries()) {
+            for (var [i, box] of r_measured_box) {
                 box.value = estimate[i].toFixed(0); 
             }
 
-            for (var [i, box] of r_ideal_box.entries() ) {
+            for (var [i, box] of r_ideal_box) {
                 box.value = ideal[i]
             }
 
@@ -334,7 +342,6 @@
         <h1>Converter</h1>
         <form>
             <table>
-                <caption>Resistor network to denary number array</caption>
                 <thead>
                     <tr>
                         <th scope="col"></th>
@@ -375,41 +382,41 @@
                     <td></td>
                     <td><input type="text" id="R0_measured" value="" /></td>
                     <td></td>
-                    <td><input type="button" id="useMeasuredButton" value="use"></td>
+                    <td><input type="button" id="useMeasuredButton" value="match"></td>
                 </tr>
                 <tr>
                     <th scope="row">R</th>
                     <td></td>
                     <td id="resSymb5" style="text-align: center;"></td>
-                    <td><select id="R5_ideal"><option value="">-</option></select></td>
+                    <td><select id="R5_ideal"><option value="0">0</option></select></td>
                     <td id="resSymb4" style="text-align: center;"></td>
-                    <td><select id="R4_ideal"><option value="">-</option></select></td>
+                    <td><select id="R4_ideal"><option value="0">0</option></select></td>
                     <td></td>
                     <td id="resSymb3" style="text-align: center;"></td>
-                    <td><select id="R3_ideal"><option value="">-</option></select></td>
+                    <td><select id="R3_ideal"><option value="0">0</option></select></td>
                     <td id="resSymb2" style="text-align: center;"></td>
-                    <td><select id="R2_ideal"><option value="">-</option></select></td>
+                    <td><select id="R2_ideal"><option value="0">0</option></select></td>
                     <td></td>
                     <td id="resSymb1" style="text-align: center;"></td>
-                    <td><select id="R1_ideal"><option value="">-</option></select></td>
+                    <td><select id="R1_ideal"><option value="0">0</option></select></td>
                     <td id="resSymb0" style="text-align: center;"></td>
-                    <td><select id="R0_ideal"><option value="">-</option></select></td>
+                    <td><select id="R0_ideal"><option value="0">0</option></select></td>
                     <td></td>
-                    <td><input type="button" id="useIdealButton" value="use"></td>
+                    <td></td>
                 </tr>
                 <tr>
                     <th scope="row">Den</th>
                     <td></td>
-                    <td colspan="2"><input type="number" id="R5_digit" min="0" max="9" value="0" /></td>
-                    <td colspan="2"><input type="number" id="R4_digit" min="0" max="9" value="0" /></td>
+                    <td colspan="2"><select id="R5_digit"><option value="0">0</option></select></td>
+                    <td colspan="2"><select id="R4_digit"><option value="0">0</option></select></td>
                     <td>.</td>
-                    <td colspan="2"><input type="number" id="R3_digit" min="0" max="9" value="0" /></td>
-                    <td colspan="2"><input type="number" id="R2_digit" min="0" max="9" value="0" /></td>
+                    <td colspan="2"><select id="R3_digit"><option value="0">0</option></select></td>
+                    <td colspan="2"><select id="R2_digit"><option value="0">0</option></select></td>
                     <td>.</td>
-                    <td colspan="2"><input type="number" id="R1_digit" min="0" max="9" value="0" /></td>
-                    <td colspan="2"><input type="number" id="R0_digit" min="0" max="9" value="0" /></td>
+                    <td colspan="2"><select id="R1_digit"><option value="0">0</option></select></td>
+                    <td colspan="2"><select id="R0_digit"><option value="0">0</option></select></td>
                     <td></td>
-                    <td><input type="button" id="useDigitButton" value="use"></td>
+                    <td></td>
 
                 </tr>
 
