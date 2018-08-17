@@ -3,29 +3,19 @@
 <title>Resistor Mesh to Denary Number Array</title>
 
 <script>
+
+    // Application constants
+
+    pu = 1000;  // pullup resistance 
+
     resmap = new Map([
         [ 0,     0 ], [ 1,   100 ], [ 2,   240 ], [ 3,   390 ], [ 4,   680 ],
         [ 5,  1000 ], [ 6,  1500 ], [ 7,  2200 ], [ 8,  4700 ], [ 9, 10000 ],
     ]);
 
-    function say(text){
-        //document.write(text + " <br /> ");
-        console.log(text);
-    }
+    // function say(text){ console.log(text); } // debug only
 
-    function resistorSVGin(id) {
-        const resistorSVG = `
-            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" 
-                width="30" height="50" id="svg0">
-                <path
-                    id="path0"
-                    d="m 15,50 0,-16 -5,-1.5 10,-3 -10,-3 10,-3 -10,-3 10,-3 -5,-1.5 0,-16"
-                    style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:5;stroke-opacity:1;stroke-dasharray:none" 
-                />
-            </svg>
-        `;
-        document.getElementById(id).innerHTML = resistorSVG;
-    }
+    // Pure math functions
 
     function par6(a,b,c,d,e,f,p) {
         var notb = (c+p)*(d+p)*(e+p)*(f+p);
@@ -81,6 +71,7 @@
         return bestMatch;
     }
 
+    // Version string generation
     function arrayToVersionString(numarray) {
         var versionString = "";
         numarray.forEach( function(number, i) {
@@ -95,6 +86,7 @@
         return versionString;
     }
 
+    // Consistent printing of number arrays
     function prettyArray(numarray, decimal_places=0, number_length=5) {
         var retArray = [];
         numarray.forEach( function(num) {
@@ -105,11 +97,49 @@
         return '{ ' + retArray.reverse().join(', ') + ' }';
     }
 
-    var pu = 1000;  var a = [0,0,0,0,0,0]; var ba = [];
+    // math unit tests
+    // var a = [0,0,0,0,0,0]; var ba = [];
     // a = [447,0,0,1001,1123,0];  ba = findBestMatch(a,pu); say(prettyArray(a)) + say( prettyArray(ba) + " :: " + cmpSoln(ba,pu,a).toFixed(2) + " :: " + arrayToVersionString(ba)); say('');
 
+    // Graphics functions
+
+    function resistorSVGin(id) {
+        const resistorSVG = `
+            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" 
+                width="30" height="50" id="svg0">
+                <path
+                    id="path0"
+                    d="m 15,50 0,-16 -5,-1.5 10,-3 -10,-3 10,-3 -10,-3 10,-3 -5,-1.5 0,-16"
+                    style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:5;stroke-opacity:1;stroke-dasharray:none" 
+                />
+            </svg>
+        `;
+        document.getElementById(id).innerHTML = resistorSVG;
+    }
+
+    // MathML support functions
+
+    // adapted from https://developer.mozilla.org/en-US/docs/Web/MathML/Authoring
+    function hasMathMLSupport() {
+        var div = document.createElement("div"), box;
+        div.innerHTML = "<math><mspace height='23px' width='77px'/></math>";
+        document.body.appendChild(div);
+        box = div.firstChild.firstChild.getBoundingClientRect();
+        document.body.removeChild(div);
+        return Math.abs(box.height - 23) <= 1  && Math.abs(box.width - 77) <= 1;
+    }
+
+    // DOM interaction
+
     window.onload = function() {
+
         var progressReadout = document.getElementById('progressReadout');
+
+        var equationPanel = document.getElementById("equationPanel");
+        var equation_pre_r_a_equiv = document.getElementById("equation_pre_r_a_equiv");
+        var equation_mathml_r_a_equiv = document.getElementById("equation_mathml_r_a_equiv");
+        var toggleEquationPanelButton = document.getElementById("toggleEquationPanelButton");
+
         var r_measured_box = new Map([
             [ 0, document.getElementById('R0_measured')],
             [ 1, document.getElementById('R1_measured')],
@@ -127,7 +157,7 @@
             [ 4, document.getElementById('R4_ideal')],
             [ 5, document.getElementById('R5_ideal')],
         ]);
-        var useIdealButton = document.getElementById('useIdealButton');
+
         var r_digit_box = new Map([
             [ 0, document.getElementById('R0_digit')],
             [ 1, document.getElementById('R1_digit')],
@@ -136,9 +166,9 @@
             [ 4, document.getElementById('R4_digit')],
             [ 5, document.getElementById('R5_digit')],
         ]);
-        var useDigitButton = document.getElementById('useDigitButton');
 
         for (var [i, box] of r_ideal_box) {
+            resistorSVGin("resSymb" + i.toFixed(0));  // create each resistor
             box.addEventListener('change', useIdeal);
             box.options.length = 0;
             for (var [digit, r] of resmap) {
@@ -156,14 +186,29 @@
             box.options[resmap.size-1].selected = true;
         }
 
-        resistorSVGin("resSymb0");
-        resistorSVGin("resSymb1");
-        resistorSVGin("resSymb2");
-        resistorSVGin("resSymb3");
-        resistorSVGin("resSymb4");
-        resistorSVGin("resSymb5");
-
         useMeasuredButton.addEventListener('click', useMeasured);
+
+        toggleEquationPanelButton.value = "show equation";
+        equationPanel.style.display = "none"; 
+        if ( hasMathMLSupport() ) {
+            equation_pre_r_a_equiv.style.display = "none";
+            equation_mathml_r_a_equiv.style.display = "block";
+        } else {
+            equation_pre_r_a_equiv.style.display = "block";
+            equation_mathml_r_a_equiv.style.display = "none";
+        }
+
+        toggleEquationPanelButton.addEventListener('click', toggleEquationPanel);
+
+        function toggleEquationPanel() {
+            if (equationPanel.style.display === "none") {
+                    toggleEquationPanelButton.value = "hide equation";
+                    equationPanel.style.display = "block";
+            } else {
+                    toggleEquationPanelButton.value = "show equation";
+                    equationPanel.style.display = "none";  
+            }
+        }
 
         function useMeasured() {
             var measured = [];
@@ -239,6 +284,16 @@
 
         input {
             width   : 100%;
+        }
+
+        #useMeasuredButton {
+            width: auto;
+            padding   : 1px 1px 1px 1px;
+        }
+
+        #toggleEquationPanelButton {
+            width: auto;
+            padding   : 1px 1px 1px 1px;
         }
 
         select {
@@ -368,19 +423,19 @@
                     <th scope="row">Rgnd</th>
                     <td></td>
                     <td></td>
-                    <td><input type="text" id="R5_measured" value="" /></td>
+                    <td><input type="text" id="R5_measured" value="0" autofocus /></td>
                     <td></td>
-                    <td><input type="text" id="R4_measured" value="" /></td>
-                    <td></td>
-                    <td></td>
-                    <td><input type="text" id="R3_measured" value="" /></td>
-                    <td></td>
-                    <td><input type="text" id="R2_measured" value="" /></td>
+                    <td><input type="text" id="R4_measured" value="0" /></td>
                     <td></td>
                     <td></td>
-                    <td><input type="text" id="R1_measured" value="" /></td>
+                    <td><input type="text" id="R3_measured" value="0" /></td>
                     <td></td>
-                    <td><input type="text" id="R0_measured" value="" /></td>
+                    <td><input type="text" id="R2_measured" value="0" /></td>
+                    <td></td>
+                    <td></td>
+                    <td><input type="text" id="R1_measured" value="0" /></td>
+                    <td></td>
+                    <td><input type="text" id="R0_measured" value="0" /></td>
                     <td></td>
                     <td><input type="button" id="useMeasuredButton" value="match"></td>
                 </tr>
@@ -423,7 +478,115 @@
             </table>
             <pre id="progressReadout">--</pre>
         </form> 
+
+    <input type="button" id="toggleEquationPanelButton" value="toggle">
+    <div id="equationPanel">
+    <div id="equation_pre_r_a_equiv">
+    <pre>
+                                                                (b+p)(c+p)(d+p)(e+p)(f+p)
+         a * ( p + ------------------------------------------------------------------------------------------------------------------ )
+                    (c+p)(d+p)(e+p)(f+p) + (b+p)(d+p)(e+p)(f+p) + (b+p)(c+p)(e+p)(f+p) + (b+p)(c+p)(d+p)(f+p) + (b+p)(c+p)(d+p)(e+p)
+r_a_equiv = --------------------------------------------------------------------------------------------------------------------------------
+                                                                (b+p)(c+p)(d+p)(e+p)(f+p)
+         a + ( p + ------------------------------------------------------------------------------------------------------------------ )
+                    (c+p)(d+p)(e+p)(f+p) + (b+p)(d+p)(e+p)(f+p) + (b+p)(c+p)(e+p)(f+p) + (b+p)(c+p)(d+p)(f+p) + (b+p)(c+p)(d+p)(e+p)
+    </pre>
     </div>
+
+    <div id="equation_mathml_r_a_equiv">
+    <math>
+        <mrow> 
+            <msub> <mi>r</mi> <mn>a_equiv</mn> </msub> <mo>=</mo>
+            <mfrac> 
+                <mrow> 
+                    <mn>a</mn><mo>*</mo>
+                    <mo>(</mo>
+                    <mn>p</mn><mo>+</mo>
+                    <mfrac> 
+                        <mrow> 
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo> 
+                        </mrow>  
+                        <mrow> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                        </mrow>
+                    </mfrac> 
+                    <mo>)</mo>
+                </mrow>
+                <mrow> 
+                    <mn>a</mn><mo>+</mo>
+                    <mo>(</mo>
+                    <mn>p</mn><mo>+</mo>
+                    <mfrac> 
+                        <mrow> 
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo> 
+                        </mrow>  
+                        <mrow> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>f</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                            <mo>+</mo>
+                            <mo>(</mo><mn>b</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>c</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo> 
+                            <mo>(</mo><mn>d</mn><mo>+</mo><mi>p</mi><mo>)</mo><mo></mo>
+                            <mo>(</mo><mn>e</mn><mo>+</mo><mi>p</mi><mo>)</mo>
+                        </mrow>
+                    </mfrac> 
+                    <mo>)</mo>
+                </mrow>
+            </mfrac>
+        </mrow>  
+    </math>
+    </div>
+    </div>
+    </div>
+
 </body>
 
 </html>
